@@ -1,5 +1,7 @@
 package app.core.services;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import javax.transaction.Transactional;
@@ -7,6 +9,7 @@ import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import app.core.entities.Company;
 import app.core.entities.Coupon;
@@ -15,6 +18,11 @@ import app.core.exceptions.CouponSystemException;
 import app.core.repositories.CompanyRepository;
 import app.core.repositories.CouponRepository;
 import app.core.repositories.CustomerRepository;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 
 @Service
@@ -97,7 +105,7 @@ public class CompanyService extends ClientService {
 		dbCoupon.setPrice(coupon.getPrice());
 		dbCoupon.setStartDate(coupon.getStartDate());
 		dbCoupon.setEndDate(coupon.getEndDate());
-		dbCoupon.setImages(coupon.getImages(), coupon.getImagesNames());
+//		dbCoupon.setImages(coupon.getImagesSrc(), coupon.getImagesNames());
 	}
 	
 	public void deleteCoupon(int couponId) throws CouponSystemException {
@@ -122,4 +130,54 @@ public class CompanyService extends ClientService {
 	public Company getCompanyDetails() {
 		return companyRepository.findFirstById(this.companyId);
 	}
+	
+	public void deleteImages(int couponId, Category category, String[] imagesToDelete) throws CouponSystemException {
+		String directoryPath =  "C:\\Users\\lidor\\eclipse-workspace\\serverCouponProjectJWT\\src\\main\\resources\\static\\pics\\"
+				+ category.toString() + "\\" + couponId;
+		File directory = new File(directoryPath);
+		File[] images = directory.listFiles();
+		for(int i = 0; i < imagesToDelete.length; i++) {
+			for(int j = 0; j < images.length; j++) {
+				if(images[j].getName().equals(imagesToDelete[i])) {
+					try {
+						images[j].delete();
+					} catch(Exception e) {
+						throw new CouponSystemException(e.getMessage());
+					}
+					
+					break;
+				}
+			}
+		}
+	}
+	
+	public void addImages(int couponId, Category category, MultipartFile[] imagesFiles) throws CouponSystemException {
+		String directoryPath =  "C:\\Users\\lidor\\eclipse-workspace\\serverCouponProjectJWT\\src\\main\\resources\\static\\pics\\"
+				+ category.toString() + "\\" + couponId;
+		Path fileStoragePath = Paths.get(directoryPath).toAbsolutePath();
+		File directory = new File(directoryPath);
+		if(!directory.exists()) {
+			 directory.mkdir();
+		}
+		for(int i = 0; i < imagesFiles.length; i++) {
+			String fileName = imagesFiles[i].getOriginalFilename();
+			if (fileName.contains("..")) {
+				throw new CouponSystemException("file name contains ilegal caharacters");
+			}
+			try {
+				Path targetLocation = fileStoragePath.resolve(fileName);
+				Files.copy(imagesFiles[i].getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+			} catch (IOException e) {
+				throw new CouponSystemException("storing file " + fileName + " failed", e);
+			}
+		}
+	}
+	
+	public void deleteCouponDirectory(int couponId, Category category) {
+		String directoryPath =  "C:\\Users\\lidor\\eclipse-workspace\\serverCouponProjectJWT\\src\\main\\resources\\static\\pics\\"
+				+ category.toString() + "\\" + couponId;
+		File directory = new File(directoryPath);
+		directory.delete();
+	}
+
 }

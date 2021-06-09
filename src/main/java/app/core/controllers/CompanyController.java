@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,7 +23,6 @@ import app.core.entities.Coupon;
 import app.core.entities.Coupon.Category;
 import app.core.jwt.JwtUtil;
 import app.core.services.CompanyService;
-import app.core.services.FileStorageService;
 import app.core.services.SharedService;
 
 @RestController
@@ -36,8 +36,6 @@ public class CompanyController {
 	private SharedService sharedService;
 	@Autowired
 	private JwtUtil jwt;
-	@Autowired
-	private FileStorageService storageService;
 	
 	private CompanyService getService(String token) {
 		companyService.setCompanyId(Integer.parseInt(jwt.extractId(token)));
@@ -68,15 +66,17 @@ public class CompanyController {
 	public void addCoupon(@RequestHeader String token, @RequestBody Coupon coupon, @RequestParam MultipartFile file) {
 		try {
 			getService(token).addCoupon(coupon);
-			this.storageService.storeFile(file, coupon.getCategory(), coupon.getId());
+//			getService(token).addImages(coupon.getId(), coupon.getCategory(), coupon.getImagesFiles());
 		} catch (Exception e) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
 		}
 	}
 	
 	@PutMapping("/coupons")
-	public void updateCoupon(@RequestHeader String token, @RequestBody Coupon coupon) {
+	public void updateCoupon(@RequestHeader String token, @ModelAttribute Coupon coupon, @RequestParam("images") MultipartFile[] imagesFiles, @RequestHeader String[] imagesToDelete) {
 		try {
+			getService(token).deleteImages(coupon.getId(), coupon.getCategory(), imagesToDelete);
+			getService(token).addImages(coupon.getId(), coupon.getCategory(), imagesFiles);
 			getService(token).updateCoupon(coupon);
 		} catch (Exception e) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
@@ -84,8 +84,9 @@ public class CompanyController {
 	}
 	
 	@DeleteMapping("/coupons")
-	public void deleteCoupon(@RequestHeader String token, @RequestHeader int couponId) {
+	public void deleteCoupon(@RequestHeader String token, @RequestHeader int couponId, @RequestHeader String category) {
 		try {
+			getService(token).deleteCouponDirectory(couponId, Category.valueOf(category));
 			getService(token).deleteCoupon(couponId);
 		} catch (Exception e) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());

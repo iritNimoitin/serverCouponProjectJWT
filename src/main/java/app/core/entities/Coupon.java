@@ -19,6 +19,11 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "coupons")
 public class Coupon {
@@ -33,12 +38,14 @@ public class Coupon {
 	private Category category;
 	private String title;
 	private String description;
+	@DateTimeFormat(pattern = "yyyy-MM-dd")
 	private LocalDate startDate;
+	@DateTimeFormat(pattern = "yyyy-MM-dd")
 	private LocalDate endDate;
 	private int amount;
 	private Double price;
 	@Transient
-	private String[] images;
+	private String[] imagesSrc;
 	@Transient
 	private String[] imagesNames;
 	@ManyToMany(cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH})
@@ -165,17 +172,18 @@ public class Coupon {
 		}
 	}
 
-	public String[] getImages() {
-		return this.images;
+	public String[] getImagesSrc() {
+		return this.imagesSrc;
 	}
 	
 	public String[] getImagesNames() {
-		return this.images;
+		return this.imagesNames;
 	}
 
 	public void setImages(String[] images, String[] imagesNames) {
 		if(images != null && images.length > 0 && imagesNames != null && imagesNames.length > 0) {
-			this.images = Arrays.copyOf(images, images.length);
+//			String[] temp = new String[this.images.length + images.length];
+			this.imagesSrc = Arrays.copyOf(images, images.length);
 			this.imagesNames = Arrays.copyOf(imagesNames, imagesNames.length);
 		}
 	}
